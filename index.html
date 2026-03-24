@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#FF6B00">
+<title>When's it ready?</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.26.4/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body, #root { height: 100%; width: 100%; overflow: hidden; }
+  body { font-family: -apple-system, sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+
+const FOOD_DATABASE = [
+  // === LEFTOVERS ===
+  { id: 1, name: "Pizza Slice", category: "Leftovers", icon: "🍕", baseTime: 45, weight: 150, tip: "Place a cup of water beside it for crispier crust", tags: ["pizza","pie","slice","pepperoni","margherita"] },
+  { id: 2, name: "Bowl of Soup", category: "Liquids", icon: "🍜", baseTime: 120, weight: 350, tip: "Stir halfway through for even heating", tags: ["soup","broth","stew","chowder","bisque","minestrone","pho","ramen broth","tomato soup","chicken soup"] },
+  { id: 3, name: "Pasta / Noodles", category: "Leftovers", icon: "🍝", baseTime: 90, weight: 250, tip: "Add a splash of water and cover loosely", tags: ["pasta","noodle","spaghetti","penne","linguine","fettuccine","macaroni","rigatoni","ziti","lo mein","chow mein","udon","pad thai"] },
+  { id: 4, name: "Plate of Rice", category: "Grains", icon: "🍚", baseTime: 90, weight: 200, tip: "Sprinkle water on top before heating", tags: ["rice","white rice","brown rice","fried rice","jasmine","basmati","pilaf","risotto","rice bowl","bibimbap"] },
+  { id: 5, name: "Mac & Cheese", category: "Leftovers", icon: "🧀", baseTime: 90, weight: 250, tip: "Add a splash of milk before reheating", tags: ["mac","mac and cheese","mac & cheese","macaroni and cheese","kraft","velveeta"] },
+  { id: 6, name: "Mashed Potatoes", category: "Leftovers", icon: "🍠", baseTime: 90, weight: 250, tip: "Stir and add butter or milk before heating", tags: ["mashed potato","mash","mashed"] },
+  { id: 7, name: "Leftover Steak", category: "Leftovers", icon: "🍖", baseTime: 90, weight: 200, tip: "Use 50% power to avoid rubbery texture", tags: ["steak","filet","sirloin","ribeye","t-bone","prime rib","roast beef"] },
+  { id: 8, name: "Fried Chicken", category: "Leftovers", icon: "🍗", baseTime: 75, weight: 180, tip: "Won't be crispy — consider oven or air fryer instead", tags: ["fried chicken","chicken wing","wing","drumstick","chicken leg","chicken thigh"] },
+  { id: 9, name: "Casserole", category: "Leftovers", icon: "🍛", baseTime: 150, weight: 300, tip: "Cover with a damp paper towel, stir midway", tags: ["casserole","bake","hotdish","gratin","au gratin"] },
+  { id: 10, name: "Lasagna", category: "Leftovers", icon: "🍝", baseTime: 150, weight: 300, tip: "Cover loosely, heat at 70% power for even warming", tags: ["lasagna","lasagne"] },
+  { id: 11, name: "Curry", category: "Leftovers", icon: "🍛", baseTime: 120, weight: 300, tip: "Stir halfway, add a splash of water if thick", tags: ["curry","tikka masala","korma","vindaloo","butter chicken","paneer","dal","daal","thai curry","green curry","red curry","massaman"] },
+  { id: 12, name: "Chili", category: "Leftovers", icon: "🌶️", baseTime: 120, weight: 300, tip: "Stir every minute for even heating", tags: ["chili","chilli","con carne"] },
+  { id: 13, name: "Stir Fry", category: "Leftovers", icon: "🔥", baseTime: 90, weight: 250, tip: "Add a teaspoon of water, cover loosely", tags: ["stir fry","stirfry","stir-fry","wok"] },
+  { id: 14, name: "Meatloaf", category: "Leftovers", icon: "🍗", baseTime: 90, weight: 200, tip: "Slice first for more even heating", tags: ["meatloaf","meat loaf"] },
+  { id: 15, name: "Shepherd's Pie", category: "Leftovers", icon: "🍲", baseTime: 150, weight: 300, tip: "Cover to keep mashed top from drying out", tags: ["shepherd","shepherds pie","cottage pie"] },
+  { id: 16, name: "Pulled Pork", category: "Leftovers", icon: "🐖", baseTime: 90, weight: 200, tip: "Add a splash of BBQ sauce or broth before heating", tags: ["pulled pork","bbq pulled pork","barbecue pork","carnitas"] },
+  { id: 114, name: "BBQ Ribs", category: "Leftovers", icon: "🍖", baseTime: 120, weight: 250, tip: "Wrap in damp paper towel, use 50% power to avoid drying out. Add BBQ sauce after.", tags: ["ribs","bbq ribs","baby back ribs","spare ribs","barbecue ribs","pork ribs","beef ribs","bbq"] },
+  { id: 17, name: "Leftover Chinese Food", category: "Leftovers", icon: "🍱", baseTime: 90, weight: 250, tip: "Remove from container, spread flat on plate", tags: ["chinese food","takeout","take-out","general tso","orange chicken","kung pao","sweet and sour"] },
+  { id: 18, name: "Leftover Indian Food", category: "Leftovers", icon: "🍛", baseTime: 100, weight: 250, tip: "Stir midway, add a splash of water for saucy dishes", tags: ["indian food","naan","tandoori","biryani","samosa"] },
+  { id: 19, name: "Spaghetti & Meatballs", category: "Leftovers", icon: "🍝", baseTime: 120, weight: 300, tip: "Add water to pasta, cut meatballs in half for even heating", tags: ["spaghetti and meatball","meatball"] },
+  { id: 20, name: "Pot Roast", category: "Leftovers", icon: "🍖", baseTime: 120, weight: 250, tip: "Add a splash of gravy or broth, cover, use 70% power", tags: ["pot roast","roast","chuck roast","beef roast"] },
+
+  // === PROTEINS ===
+  { id: 21, name: "Chicken Breast", category: "Proteins", icon: "🍗", baseTime: 120, weight: 200, tip: "Use 50-70% power for more even heating", tags: ["chicken breast","chicken","grilled chicken","baked chicken","rotisserie"] },
+  { id: 22, name: "Hot Dog", category: "Proteins", icon: "🌭", baseTime: 40, weight: 60, tip: "Wrap in damp paper towel", tags: ["hot dog","hotdog","frank","frankfurter","wiener","sausage link"] },
+  { id: 23, name: "Egg (scrambled)", category: "Proteins", icon: "🍳", baseTime: 90, weight: 120, tip: "Stir every 30 sec for fluffy eggs", tags: ["egg","scrambled egg","eggs"] },
+  { id: 24, name: "Fish Fillet", category: "Proteins", icon: "🐟", baseTime: 90, weight: 170, tip: "Use 50% power, cover with damp paper towel", tags: ["fish","fish fillet","tilapia","cod","haddock","halibut","trout","catfish","perch"] },
+  { id: 25, name: "Salmon", category: "Proteins", icon: "🍣", baseTime: 90, weight: 170, tip: "Use 50% power — overcooking makes it rubbery", tags: ["salmon","salmon fillet","lox"] },
+  { id: 26, name: "Shrimp", category: "Proteins", icon: "🍤", baseTime: 60, weight: 150, tip: "Arrange in a circle on plate, cover loosely", tags: ["shrimp","prawn","scampi"] },
+  { id: 27, name: "Turkey Slice", category: "Proteins", icon: "🍗", baseTime: 60, weight: 150, tip: "Layer flat, sprinkle with broth to keep moist", tags: ["turkey","turkey slice","turkey breast","deli turkey"] },
+  { id: 28, name: "Pork Chop", category: "Proteins", icon: "🍖", baseTime: 90, weight: 200, tip: "Use 50% power, flip halfway", tags: ["pork chop","pork","chop","pork loin"] },
+  { id: 29, name: "Bacon", category: "Proteins", icon: "🍖", baseTime: 60, weight: 60, tip: "Layer between paper towels, 3-4 strips at a time", tags: ["bacon","bacon strip","turkey bacon"] },
+  { id: 30, name: "Ground Beef (cooked)", category: "Proteins", icon: "🍔", baseTime: 90, weight: 200, tip: "Break apart and stir halfway through", tags: ["ground beef","ground meat","taco meat","hamburger meat","mince"] },
+  { id: 31, name: "Tofu", category: "Proteins", icon: "🍢", baseTime: 60, weight: 150, tip: "Cut into pieces, cover — won't crisp in microwave", tags: ["tofu","bean curd","tempeh"] },
+  { id: 32, name: "Lamb", category: "Proteins", icon: "🐑", baseTime: 100, weight: 200, tip: "Use 50% power, add a splash of broth", tags: ["lamb","lamb chop","lamb shank","gyro meat"] },
+
+  // === GRAINS & CARBS ===
+  { id: 33, name: "Oatmeal", category: "Grains", icon: "🍜", baseTime: 120, weight: 300, tip: "Use a large bowl — it bubbles up!", tags: ["oatmeal","oat","porridge","grits"] },
+  { id: 34, name: "Bread (softening)", category: "Grains", icon: "🍞", baseTime: 15, weight: 80, tip: "Wrap in damp paper towel, heat in 10-sec bursts", tags: ["bread","roll","bun","dinner roll","baguette","ciabatta","sourdough","tortilla","pita","naan bread","flatbread"] },
+  { id: 35, name: "Quinoa", category: "Grains", icon: "🌾", baseTime: 90, weight: 200, tip: "Add water, cover, stir halfway", tags: ["quinoa","grain bowl","farro","couscous","bulgur"] },
+  { id: 36, name: "Pancakes / Waffles", category: "Grains", icon: "🍰", baseTime: 40, weight: 120, tip: "Stack with paper towels between, won't be crispy", tags: ["pancake","waffle","french toast","crepe"] },
+  { id: 37, name: "Cornbread", category: "Grains", icon: "🌽", baseTime: 30, weight: 100, tip: "Wrap in damp paper towel to keep moist", tags: ["cornbread","corn bread","corn muffin"] },
+  { id: 38, name: "Stuffing / Dressing", category: "Grains", icon: "🌾", baseTime: 90, weight: 200, tip: "Add broth to moisten, cover loosely", tags: ["stuffing","dressing"] },
+
+  // === VEGETABLES ===
+  { id: 39, name: "Baked Potato", category: "Vegetables", icon: "🍠", baseTime: 300, weight: 200, tip: "Poke holes first, flip halfway", tags: ["baked potato","potato","sweet potato","yam"] },
+  { id: 40, name: "Steamed Broccoli", category: "Vegetables", icon: "🌿", baseTime: 120, weight: 200, tip: "Add 2 tbsp water, cover tightly", tags: ["broccoli","broccolini"] },
+  { id: 41, name: "Corn", category: "Vegetables", icon: "🌽", baseTime: 90, weight: 200, tip: "Add a splash of water, cover, stir halfway", tags: ["corn","sweet corn","canned corn","corn kernels","niblets","leftover corn"] },
+  { id: 42, name: "Green Beans", category: "Vegetables", icon: "🌱", baseTime: 120, weight: 200, tip: "Add a tablespoon of water, cover", tags: ["green bean","green beans","string bean","snap pea"] },
+  { id: 43, name: "Carrots", category: "Vegetables", icon: "🌽", baseTime: 150, weight: 200, tip: "Slice evenly, add water, cover", tags: ["carrot","carrots"] },
+  { id: 44, name: "Peas", category: "Vegetables", icon: "🌱", baseTime: 90, weight: 150, tip: "Add a splash of water, cover, stir once", tags: ["pea","peas","green peas"] },
+  { id: 45, name: "Spinach", category: "Vegetables", icon: "🍃", baseTime: 60, weight: 150, tip: "Wilt with a sprinkle of water, stir halfway", tags: ["spinach","kale","greens","collard"] },
+  { id: 46, name: "Asparagus", category: "Vegetables", icon: "🌿", baseTime: 120, weight: 150, tip: "Arrange spears, add water, cover tightly", tags: ["asparagus"] },
+  { id: 47, name: "Squash / Zucchini", category: "Vegetables", icon: "🎃", baseTime: 120, weight: 200, tip: "Slice into rounds, add water, cover", tags: ["squash","zucchini","butternut squash","acorn squash","spaghetti squash"] },
+  { id: 48, name: "Mixed Vegetables", category: "Vegetables", icon: "🍃", baseTime: 120, weight: 200, tip: "Add water, cover, stir midway", tags: ["mixed veggie","vegetable medley","veggie mix","steamed vegetable","side of vegetable"] },
+  { id: 49, name: "Cauliflower", category: "Vegetables", icon: "🌿", baseTime: 150, weight: 200, tip: "Cut into florets, add water, cover", tags: ["cauliflower"] },
+  { id: 50, name: "Brussels Sprouts", category: "Vegetables", icon: "🍃", baseTime: 150, weight: 200, tip: "Halve them, add water, cover — won't crisp", tags: ["brussels sprout","brussel sprout","sprouts"] },
+
+  // === FROZEN ===
+  { id: 51, name: "Frozen Burrito", category: "Frozen", icon: "🌯", baseTime: 150, weight: 200, tip: "Flip halfway, let stand 1 min after", tags: ["frozen burrito","burrito"] },
+  { id: 52, name: "Frozen Pizza", category: "Frozen", icon: "🍕", baseTime: 240, weight: 300, tip: "Not ideal for microwave — oven is better", tags: ["frozen pizza"] },
+  { id: 53, name: "Frozen Veggies", category: "Frozen", icon: "🌿", baseTime: 180, weight: 200, tip: "Cover and add 1 tbsp water", tags: ["frozen veggie","frozen vegetable","frozen pea","frozen corn","frozen broccoli","frozen spinach"] },
+  { id: 54, name: "Frozen Dinner / TV Dinner", category: "Frozen", icon: "🍱", baseTime: 240, weight: 300, tip: "Vent the film, rotate halfway", tags: ["frozen dinner","tv dinner","lean cuisine","hungry man","stouffer","marie callender","frozen meal","microwave meal","ready meal"] },
+  { id: 55, name: "Frozen Chicken Nuggets", category: "Frozen", icon: "🍗", baseTime: 120, weight: 150, tip: "Spread in single layer, flip halfway — won't be crispy", tags: ["chicken nugget","nugget","chicken tender","chicken finger","chicken strip"] },
+  { id: 56, name: "Frozen Fish Sticks", category: "Frozen", icon: "🐟", baseTime: 120, weight: 150, tip: "Single layer, flip once — oven is crispier", tags: ["fish stick","fish finger"] },
+  { id: 57, name: "Frozen Egg Roll / Spring Roll", category: "Frozen", icon: "🌯", baseTime: 90, weight: 120, tip: "Wrap in damp paper towel, won't be crispy", tags: ["egg roll","spring roll","frozen egg roll","frozen spring roll"] },
+  { id: 58, name: "Frozen Pot Pie", category: "Frozen", icon: "🍲", baseTime: 300, weight: 300, tip: "Vent top, rotate 180° halfway", tags: ["pot pie","frozen pot pie","chicken pot pie"] },
+  { id: 59, name: "Frozen Waffles / Pancakes", category: "Frozen", icon: "🍞", baseTime: 60, weight: 100, tip: "Wrap in paper towel — toaster is much better", tags: ["frozen waffle","frozen pancake","eggo"] },
+  { id: 60, name: "Frozen Meatballs", category: "Frozen", icon: "🍖", baseTime: 150, weight: 200, tip: "Spread out, rotate halfway, let stand 1 min", tags: ["frozen meatball"] },
+  { id: 61, name: "Hot Pocket", category: "Frozen", icon: "🌮", baseTime: 120, weight: 130, tip: "Use crisping sleeve, let stand 2 min — center gets very hot", tags: ["hot pocket","hotpocket","calzone","frozen calzone","pizza pocket","pizza pop"] },
+  { id: 62, name: "Frozen Dumplings", category: "Frozen", icon: "🍙", baseTime: 120, weight: 180, tip: "Add a splash of water, cover tightly", tags: ["dumpling","frozen dumpling","gyoza","potsticker","pierogi","wonton"] },
+  { id: 63, name: "Frozen Edamame", category: "Frozen", icon: "🌱", baseTime: 120, weight: 150, tip: "Add water, cover, salt after cooking", tags: ["edamame","frozen edamame"] },
+
+  // === LIQUIDS ===
+  { id: 64, name: "Coffee / Tea", category: "Liquids", icon: "☕", baseTime: 60, weight: 250, tip: "Don't overheat — stop before boiling", tags: ["coffee","tea","espresso","latte","cappuccino","americano","matcha","chai"] },
+  { id: 65, name: "Milk (warm)", category: "Liquids", icon: "🍶", baseTime: 60, weight: 250, tip: "Stir every 15 sec, don't boil", tags: ["milk","warm milk","hot milk","chocolate milk","hot chocolate","cocoa","hot cocoa"] },
+  { id: 66, name: "Water (for tea)", category: "Liquids", icon: "💧", baseTime: 90, weight: 250, tip: "Place a wooden stick in the cup to prevent superheating", tags: ["water","hot water","boil water"] },
+  { id: 67, name: "Baby Bottle / Formula", category: "Liquids", icon: "🍼", baseTime: 30, weight: 120, tip: "Heat in 10-sec bursts, shake well, test temperature!", tags: ["baby bottle","formula","baby formula","breast milk"] },
+  { id: 68, name: "Gravy / Sauce", category: "Liquids", icon: "🍶", baseTime: 60, weight: 150, tip: "Stir every 20 seconds to prevent skin forming", tags: ["gravy","sauce","pasta sauce","marinara","alfredo","tomato sauce","salsa","enchilada sauce","bechamel"] },
+  { id: 69, name: "Apple Cider", category: "Liquids", icon: "🍎", baseTime: 75, weight: 250, tip: "Stir halfway, don't boil", tags: ["cider","apple cider","mulled cider","mulled wine"] },
+  { id: 70, name: "Juice (warm)", category: "Liquids", icon: "🍹", baseTime: 45, weight: 250, tip: "Remove from juice box first! Stir halfway", tags: ["juice","orange juice","warm juice","lemon water"] },
+
+  // === DAIRY ===
+  { id: 71, name: "Butter (softening)", category: "Dairy", icon: "🍯", baseTime: 15, weight: 50, tip: "Use 20% power, check every 5 seconds", tags: ["butter","soften butter","melt butter","margarine"] },
+  { id: 72, name: "Cream Cheese (softening)", category: "Dairy", icon: "🧀", baseTime: 20, weight: 100, tip: "Unwrap, use 50% power in 10-sec bursts", tags: ["cream cheese","soften cream cheese","neufchatel"] },
+  { id: 73, name: "Cheese (melting)", category: "Dairy", icon: "🧀", baseTime: 30, weight: 80, tip: "Use 50% power, check every 10 seconds", tags: ["cheese","melt cheese","shredded cheese","nacho cheese","queso","cheese dip"] },
+  { id: 74, name: "Yogurt (to room temp)", category: "Dairy", icon: "🍶", baseTime: 10, weight: 150, tip: "Just 10 seconds to take the chill off", tags: ["yogurt","yoghurt","greek yogurt"] },
+  { id: 75, name: "Ice Cream (softening)", category: "Dairy", icon: "🍦", baseTime: 15, weight: 300, tip: "Use 30% power in 10-sec bursts until scoopable", tags: ["ice cream","gelato","frozen yogurt","sorbet","soften ice cream"] },
+
+  // === SNACKS ===
+  { id: 76, name: "Popcorn (bag)", category: "Snacks", icon: "🍿", baseTime: 150, weight: 100, tip: "Listen for pops — stop at 2-sec gaps", tags: ["popcorn","microwave popcorn","bag of popcorn"] },
+  { id: 77, name: "Nachos", category: "Snacks", icon: "🌮", baseTime: 30, weight: 150, tip: "Spread flat, don't stack. Watch the cheese!", tags: ["nacho","nachos","tortilla chip","chips and cheese"] },
+  { id: 78, name: "Soft Pretzel", category: "Snacks", icon: "➰", baseTime: 30, weight: 100, tip: "Wrap in damp paper towel for 20-30 sec", tags: ["pretzel","soft pretzel"] },
+  { id: 79, name: "Mozzarella Sticks", category: "Snacks", icon: "🧀", baseTime: 60, weight: 120, tip: "Won't be crispy — oven is much better", tags: ["mozzarella stick","cheese stick","fried cheese"] },
+  { id: 80, name: "Pizza Rolls", category: "Snacks", icon: "🍕", baseTime: 75, weight: 150, tip: "Single layer, let stand 2 min — filling is lava!", tags: ["pizza roll","pizza bite","totino","bagel bite"] },
+  { id: 81, name: "Leftover Fries", category: "Snacks", icon: "🍟", baseTime: 45, weight: 150, tip: "Microwave makes them soggy — oven/air fryer is better", tags: ["fries","french fries","leftover fries","cold fries","chips"] },
+  { id: 82, name: "Taquitos", category: "Snacks", icon: "🌮", baseTime: 75, weight: 120, tip: "Wrap in paper towel, won't be as crispy as oven", tags: ["taquito","frozen taquito","flauta"] },
+
+  // === BREAKFAST ===
+  { id: 83, name: "Breakfast Sandwich", category: "Breakfast", icon: "🍳", baseTime: 75, weight: 150, tip: "Wrap in paper towel, disassemble if possible for even heating", tags: ["breakfast sandwich","egg sandwich","mcmuffin","breakfast wrap","breakfast burrito"] },
+  { id: 84, name: "Breakfast Sausage", category: "Breakfast", icon: "🌭", baseTime: 45, weight: 80, tip: "Prick with fork, cover with paper towel", tags: ["breakfast sausage","sausage patty","sausage link","jimmy dean"] },
+  { id: 85, name: "Frozen Breakfast Bowl", category: "Breakfast", icon: "🍜", baseTime: 180, weight: 250, tip: "Stir halfway, let stand 1 min", tags: ["breakfast bowl","frozen breakfast","scramble bowl"] },
+  { id: 86, name: "Cinnamon Roll", category: "Breakfast", icon: "🍩", baseTime: 25, weight: 80, tip: "10-15 sec to warm, more makes it hard", tags: ["cinnamon roll","pastry","danish","croissant","muffin","scone"] },
+
+  // === MEALS & SANDWICHES ===
+  { id: 87, name: "Burrito / Wrap", category: "Meals", icon: "🌯", baseTime: 90, weight: 250, tip: "Wrap in damp paper towel, flip halfway", tags: ["wrap","quesadilla","chimichanga","enchilada"] },
+  { id: 88, name: "Sandwich / Sub", category: "Meals", icon: "🍞", baseTime: 45, weight: 200, tip: "Remove cold toppings first, heat filling separately", tags: ["sandwich","sub","hoagie","panini","grilled cheese","philly cheesesteak","club sandwich","blt","deli sandwich"] },
+  { id: 89, name: "Tacos", category: "Meals", icon: "🌮", baseTime: 45, weight: 150, tip: "Heat filling and shell separately for best results", tags: ["taco","taco meat","taco filling","street taco"] },
+  { id: 90, name: "Bowl (Grain/Poke/Buddha)", category: "Meals", icon: "🍃", baseTime: 90, weight: 300, tip: "Remove cold toppings, heat base only", tags: ["bowl","grain bowl","poke bowl","buddha bowl","power bowl","chipotle bowl","burrito bowl"] },
+  { id: 91, name: "Hamburger / Slider", category: "Meals", icon: "🍔", baseTime: 60, weight: 180, tip: "Disassemble — heat patty separate from bun", tags: ["hamburger","burger","cheeseburger","slider","veggie burger"] },
+  { id: 92, name: "Chicken Parmesan", category: "Meals", icon: "🍗", baseTime: 120, weight: 280, tip: "Cover loosely, won't be crispy — oven better for crunch", tags: ["chicken parm","chicken parmesan","chicken parmigiana","eggplant parm"] },
+  { id: 93, name: "Meat Pie / Empanada", category: "Meals", icon: "🍙", baseTime: 75, weight: 150, tip: "Heat in 30-sec bursts, filling gets very hot", tags: ["meat pie","empanada","pasty","hand pie"] },
+  { id: 94, name: "Sushi (to warm)", category: "Meals", icon: "🍣", baseTime: 20, weight: 150, tip: "Only 15-20 sec to take fridge chill off — don't cook it!", tags: ["sushi","sushi roll","california roll"] },
+
+  // === SIDES ===
+  { id: 95, name: "Baked Beans", category: "Sides", icon: "🍲", baseTime: 90, weight: 200, tip: "Stir halfway, cover to avoid splatter", tags: ["baked bean","beans","refried beans","black beans","bean dip"] },
+  { id: 96, name: "Coleslaw / Potato Salad (warming)", category: "Sides", icon: "🍃", baseTime: 30, weight: 200, tip: "Just enough to take the fridge chill off", tags: ["coleslaw","potato salad","macaroni salad"] },
+  { id: 97, name: "Dinner Roll / Bread", category: "Sides", icon: "🍞", baseTime: 15, weight: 60, tip: "Wrap in damp towel, 10-15 sec max or it gets tough", tags: ["dinner roll","bread roll","biscuit","breadstick"] },
+  { id: 98, name: "Stuffed Peppers", category: "Sides", icon: "🌶️", baseTime: 120, weight: 250, tip: "Cover, rotate halfway, let stand 1 min", tags: ["stuffed pepper","stuffed bell pepper"] },
+  { id: 99, name: "Macaroni Salad / Pasta Salad", category: "Sides", icon: "🍝", baseTime: 30, weight: 200, tip: "Just a quick warm — don't overheat mayo-based dishes", tags: ["macaroni salad","pasta salad"] },
+
+  // === DESSERTS ===
+  { id: 100, name: "Brownie / Cookie (warm)", category: "Desserts", icon: "🍪", baseTime: 15, weight: 80, tip: "10-15 sec max for that fresh-baked warmth", tags: ["brownie","cookie","warm cookie","chocolate chip cookie","blondie"] },
+  { id: 101, name: "Pie Slice", category: "Desserts", icon: "🍰", baseTime: 30, weight: 150, tip: "15-30 sec just to warm — crust won't be flaky", tags: ["pie","apple pie","pumpkin pie","cherry pie","pecan pie","pie slice"] },
+  { id: 102, name: "Mug Cake", category: "Desserts", icon: "🍰", baseTime: 75, weight: 150, tip: "Use a large mug — it rises a lot!", tags: ["mug cake","microwave cake","lava cake"] },
+  { id: 103, name: "Chocolate (melting)", category: "Desserts", icon: "🍫", baseTime: 60, weight: 100, tip: "Use 50% power, stir every 15 sec — burns easily", tags: ["chocolate","melt chocolate","chocolate chip","chocolate melting"] },
+  { id: 104, name: "S'mores", category: "Desserts", icon: "🍫", baseTime: 15, weight: 50, tip: "Watch the marshmallow — it expands fast!", tags: ["smore","s'more","marshmallow"] },
+  { id: 105, name: "Bread Pudding", category: "Desserts", icon: "🍮", baseTime: 45, weight: 150, tip: "Cover loosely, heat gently at 70% power", tags: ["bread pudding","pudding","rice pudding","custard","flan"] },
+
+  // === BABY & KIDS ===
+  { id: 106, name: "Baby Food Jar", category: "Baby & Kids", icon: "🍼", baseTime: 15, weight: 100, tip: "Remove lid, stir well, always test temperature!", tags: ["baby food","puree","baby puree","baby jar"] },
+  { id: 107, name: "Kid's Mac & Cheese Cup", category: "Baby & Kids", icon: "🧀", baseTime: 90, weight: 200, tip: "Add water to fill line, stir halfway", tags: ["easy mac","mac cup","cup noodle","instant mac","kid mac"] },
+  { id: 108, name: "Dino Nuggets (frozen)", category: "Baby & Kids", icon: "🐔", baseTime: 90, weight: 120, tip: "Single layer, flip once — not as crispy as oven", tags: ["dino nugget","kid nugget","fun shape nugget"] },
+
+  // === QUICK MEALS ===
+  { id: 109, name: "Instant Ramen / Cup Noodles", category: "Quick Meals", icon: "🍜", baseTime: 180, weight: 350, tip: "Add water first! Don't microwave the styrofoam cup", tags: ["instant ramen","cup noodle","cup o noodle","maruchan","nissin","top ramen","instant noodle"] },
+  { id: 110, name: "Canned Soup", category: "Quick Meals", icon: "🍵", baseTime: 150, weight: 350, tip: "Transfer to microwave-safe bowl, stir halfway", tags: ["canned soup","campbell","progresso","chunky soup","canned chili"] },
+  { id: 111, name: "Instant Oatmeal", category: "Quick Meals", icon: "🍜", baseTime: 90, weight: 250, tip: "Add water/milk, use a deep bowl — it bubbles!", tags: ["instant oatmeal","oatmeal packet","quaker","instant porridge"] },
+  { id: 112, name: "Rice Cup / Instant Rice", category: "Quick Meals", icon: "🍚", baseTime: 90, weight: 200, tip: "Vent lid, no need to add water", tags: ["minute rice","instant rice","rice cup","uncle ben","ready rice","90 second rice"] },
+  { id: 113, name: "Frozen Breakfast Sandwich", category: "Quick Meals", icon: "🍳", baseTime: 120, weight: 130, tip: "Remove wrapper, wrap in paper towel, flip halfway", tags: ["frozen breakfast sandwich","jimmy dean sandwich","hot pocket breakfast"] },
+];
+
+const CATEGORIES = [...new Set(FOOD_DATABASE.map(f => f.category))];
+const WATTAGES = [600, 700, 800, 900, 1000, 1100, 1200, 1250];
+const BASE_WATTAGE = 1000;
+
+function calcTime(baseTime, wattage, weightMultiplier = 1, fromFrozen = false) {
+  let time = baseTime * (BASE_WATTAGE / wattage) * weightMultiplier;
+  if (fromFrozen) time *= 1.5;
+  return Math.round(time);
+}
+
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function formatTimeWords(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return `${s} sec`;
+  if (s === 0) return `${m} min`;
+  return `${m} min ${s} sec`;
+}
+
+// Smart Search — tag-based scoring with per-keyword deduplication
+const STOP_WORDS = new Set(["the","and","for","with","from","some","leftover","left","over","frozen","warm","cold","reheat","heat","my","our","a","of","in","on","it","up","plate","bowl","cup","serving","piece","slice"]);
+
+function getSmartSuggestion(query) {
+  const q = query.toLowerCase().trim();
+  if (!q) return null;
+
+  // Exact name match (only for single-food queries without commas/and)
+  const isMultiFood = /,|\band\b/.test(q);
+
+  if (!isMultiFood) {
+    const exact = FOOD_DATABASE.find(f => f.name.toLowerCase() === q);
+    if (exact) return { food: exact, matchedFoods: [exact], confidence: 0.98, source: "database" };
+
+    // Partial match — only if the query IS the food name or vice versa, not just a substring
+    // "corn" should NOT match "Cornbread", but "pizza slice" should match "Pizza Slice"
+    const partial = FOOD_DATABASE.find(f => {
+      const fn = f.name.toLowerCase();
+      // Query fully contains the food name (e.g. "leftover pizza slice" contains "pizza slice")
+      if (q.includes(fn)) return true;
+      // Food name equals query with minor extras (e.g. query "pizza" matches "Pizza Slice" only if query is a whole word in the name)
+      if (fn.includes(q)) {
+        // Make sure q matches as a whole word, not a substring of another word
+        const idx = fn.indexOf(q);
+        const before = idx === 0 || fn[idx - 1] === ' ' || fn[idx - 1] === '/';
+        const after = idx + q.length === fn.length || fn[idx + q.length] === ' ' || fn[idx + q.length] === '/';
+        return before && after;
+      }
+      return false;
+    });
+    if (partial) return { food: partial, matchedFoods: [partial], confidence: 0.95, source: "database" };
+  }
+
+  // Modifier detection
+  const isFrozen = ["frozen","freezer","ice cold","from the freezer"].some(w => q.includes(w));
+  const isLeftover = ["leftover","left over","last night","yesterday","reheat","warm up","day old","cold"].some(w => q.includes(w));
+
+  // Split query into "segments" by commas — each segment is a separate food concept
+  // Only split on "and" when preceded by comma or when it separates clearly distinct items
+  // First, protect known phrases containing "and" by temporarily replacing them
+  const knownPhrases = ["mac and cheese","macaroni and cheese","bread and butter","rice and beans","chips and cheese","chips and salsa","peanut butter and jelly","biscuits and gravy","salt and pepper"];
+  let splitQ = q;
+  const restored = [];
+  for (const phrase of knownPhrases) {
+    if (splitQ.includes(phrase)) {
+      const placeholder = phrase.replace(/ and /g, "_AND_");
+      splitQ = splitQ.replace(phrase, placeholder);
+      restored.push({ placeholder, phrase });
+    }
+  }
+  // Now split on commas and standalone "and"
+  let segments = splitQ.split(/,|\band\b/).map(s => s.trim()).filter(s => s.length > 0);
+  // Restore protected phrases
+  segments = segments.map(seg => {
+    for (const { placeholder, phrase } of restored) {
+      seg = seg.replace(placeholder, phrase);
+    }
+    return seg;
+  });
+
+  // For each segment, find the best matching food
+  const matchedFoods = [];
+  const seenIds = new Set();
+  let totalScore = 0;
+
+  for (const segment of segments) {
+    // Remove stop words from the segment to get meaningful words
+    const segWords = segment.split(/[\s]+/).filter(w => w.length > 1 && !STOP_WORDS.has(w));
+    if (segWords.length === 0) continue;
+
+    let bestFood = null;
+    let bestScore = 0;
+
+    for (const food of FOOD_DATABASE) {
+      if (seenIds.has(food.id)) continue; // Don't match same food twice
+      let score = 0;
+
+      // 1) Check if the full segment matches a tag (highest priority)
+      for (const tag of (food.tags || [])) {
+        if (tag === segment || segment === tag) { score += 30; }
+        else if (segment.includes(tag) && tag.length > 3) { score += tag.split(" ").length * 10; }
+        else if (tag.includes(segment) && segment.length > 3) { score += 8; }
+      }
+
+      // 2) Check each word in the segment against tags
+      for (const sw of segWords) {
+        for (const tag of (food.tags || [])) {
+          if (tag === sw) { score += 20; }                           // exact word = tag
+          else if (tag.split(" ").includes(sw)) { score += 12; }    // word is part of multi-word tag
+          else if (sw.length >= 4 && tag.includes(sw) && tag.startsWith(sw)) { score += 6; } // prefix match only (corn→cornbread NO, corn→corn YES)
+        }
+      }
+
+      // 3) Check food name words
+      const nameWords = food.name.toLowerCase().split(/[\s\/&()+]+/).filter(w => w.length > 2);
+      for (const sw of segWords) {
+        for (const nw of nameWords) {
+          if (nw === sw) { score += 15; }
+          else if (sw.length >= 4 && nw.startsWith(sw)) { score += 5; }
+        }
+      }
+
+      // 4) Bonus: if multiple segment words match the same food, it's a stronger signal
+      const matchCount = segWords.filter(sw =>
+        (food.tags || []).some(t => t === sw || t.split(" ").includes(sw)) ||
+        nameWords.some(nw => nw === sw)
+      ).length;
+      if (matchCount > 1) score += matchCount * 8;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestFood = food;
+      }
+    }
+
+    if (bestFood && bestScore > 0) {
+      seenIds.add(bestFood.id);
+      matchedFoods.push(bestFood);
+      totalScore += bestScore;
+    }
+  }
+
+  // If segment-based matching found nothing, fall back to whole-query word matching
+  if (matchedFoods.length === 0) {
+    const allWords = q.split(/[\s,&+]+/).filter(w => w.length > 2 && !STOP_WORDS.has(w));
+    for (const qw of allWords) {
+      let bestFood = null;
+      let bestScore = 0;
+      for (const food of FOOD_DATABASE) {
+        if (seenIds.has(food.id)) continue;
+        let score = 0;
+        for (const tag of (food.tags || [])) {
+          if (tag === qw) score += 20;
+          else if (tag.split(" ").includes(qw)) score += 12;
+        }
+        const nameWords = food.name.toLowerCase().split(/[\s\/&()+]+/).filter(w => w.length > 2);
+        for (const nw of nameWords) { if (nw === qw) score += 15; }
+        if (score > bestScore) { bestScore = score; bestFood = food; }
+      }
+      if (bestFood && bestScore > 0) {
+        seenIds.add(bestFood.id);
+        matchedFoods.push(bestFood);
+        totalScore += bestScore;
+      }
+    }
+  }
+
+  if (matchedFoods.length === 0) {
+    // Last resort fallback
+    let fallbackBest = null;
+    let fallbackScore = 0;
+    for (const food of FOOD_DATABASE) {
+      let score = 0;
+      for (const tag of (food.tags || [])) { if (q.includes(tag)) score += tag.split(" ").length * 10; }
+      if (score > fallbackScore) { fallbackScore = score; fallbackBest = food; }
+    }
+    if (fallbackBest) return { food: { ...fallbackBest, name: query.charAt(0).toUpperCase() + query.slice(1) }, matchedFoods: [fallbackBest], confidence: Math.min(0.85, 0.5 + fallbackScore * 0.02), source: "smart", isFrozen, isLeftover };
+
+    const isLiquid = ["drink","water","juice","broth","latte","cocoa","cider","smoothie","shake","beverage"].some(w => q.includes(w));
+    if (isLiquid) return { food: { id: 9000, name: query, category: "Liquids", icon: "☕", baseTime: 60, weight: 250, tip: "Heat in 15-second intervals, stir between" }, matchedFoods: [], confidence: 0.4, source: "smart", isFrozen, isLeftover };
+    return { food: { id: 9999, name: query, category: isLeftover ? "Leftovers" : "Custom", icon: "🍽️", baseTime: 90, weight: 200, tip: "Start with less time — you can always add more" }, matchedFoods: [], confidence: 0.3, source: "smart", isFrozen, isLeftover };
+  }
+
+  // Single match
+  if (matchedFoods.length === 1) {
+    const best = matchedFoods[0];
+    return { food: { ...best, name: query.charAt(0).toUpperCase() + query.slice(1) }, matchedFoods: [best], confidence: Math.min(0.92, 0.6 + totalScore * 0.01), source: "smart", isFrozen, isLeftover };
+  }
+
+  // Multi-match composite
+  const capped = matchedFoods.slice(0, 3);
+  const compositeTime = Math.round(capped.reduce((sum, f) => sum + f.baseTime, 0) / (1 + (capped.length - 1) * 0.4));
+  const primary = capped.reduce((a, b) => a.baseTime > b.baseTime ? a : b);
+
+  return {
+    food: {
+      id: 900 + capped.reduce((a, f) => a + f.id, 0),
+      name: query.charAt(0).toUpperCase() + query.slice(1),
+      category: isLeftover ? "Leftovers" : isFrozen ? "Frozen" : primary.category,
+      icon: capped.map(f => f.icon).slice(0, 3),
+      baseTime: compositeTime,
+      weight: capped.reduce((s, f) => s + f.weight, 0),
+      tip: primary.tip,
+    },
+    matchedFoods: capped,
+    confidence: Math.min(0.95, 0.65 + totalScore * 0.003),
+    source: "smart", isFrozen, isLeftover,
+  };
+}
+
+function CircularTimer({ progress, timeLeft, isRunning, total, foodIcon }) {
+  const r = 110, sw = 8, c = 2 * Math.PI * r, off = c - progress * c;
+  const isDone = timeLeft === 0 && progress > 0;
+  const isPreview = timeLeft === 0 && progress === 0;
+  const firstIcon = Array.isArray(foodIcon) ? foodIcon[0] : foodIcon;
+
+  return (
+    <div style={{ position: "relative", width: 260, height: 260, margin: "0 auto" }}>
+      {/* Progress ring */}
+      <svg width={260} height={260} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }}>
+        <circle cx={130} cy={130} r={r} fill="none" stroke="var(--timer-ring)" strokeWidth={sw} />
+        <circle cx={130} cy={130} r={r} fill="none" stroke={isRunning ? "var(--timer-active)" : isDone ? "var(--timer-done)" : "var(--timer-active)"} strokeWidth={sw} strokeLinecap="round" strokeDasharray={c} strokeDashoffset={off} style={{ transition: "stroke-dashoffset 0.4s ease, stroke 0.3s" }} />
+      </svg>
+
+      {/* Center content */}
+      <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+        {isDone ? (
+          <>
+            <span style={{ fontSize: 20, fontWeight: 700, color: "var(--timer-done)", letterSpacing: 2 }}>DONE!</span>
+            <span style={{ fontSize: 42, marginTop: 2 }}>🔔</span>
+            <span style={{ fontSize: 13, color: "var(--muted)", marginTop: 2 }}>It's ready!</span>
+          </>
+        ) : (
+          <>
+            {/* Animated microwave */}
+            <div style={{ width: 120, height: 88, position: "relative", marginBottom: 8 }}>
+              <svg viewBox="0 0 120 88" width={120} height={88}>
+                {/* Body */}
+                <rect x="4" y="8" width="112" height="76" rx="10" fill="var(--surface2)" stroke="var(--border)" strokeWidth="1.5" />
+                {/* Window */}
+                <rect x="12" y="16" width="72" height="56" rx="6" fill="var(--bg)" stroke="var(--border)" strokeWidth="1" />
+                {/* Window inner glow when running */}
+                {isRunning && (
+                  <rect x="13" y="17" width="70" height="54" rx="5" fill="var(--accent)" opacity="0.06">
+                    <animate attributeName="opacity" values="0.03;0.08;0.03" dur="1.5s" repeatCount="indefinite" />
+                  </rect>
+                )}
+                {/* Turntable line */}
+                <ellipse cx="48" cy="64" rx="22" ry="3" fill="none" stroke="var(--border)" strokeWidth="0.8" strokeDasharray="2 2">
+                  {isRunning && <animateTransform attributeName="transform" type="rotate" from="0 48 64" to="360 48 64" dur="3s" repeatCount="indefinite" />}
+                </ellipse>
+                {/* Food on plate */}
+                <g>
+                  {isRunning && <animateTransform attributeName="transform" type="rotate" from="0 48 56" to="360 48 56" dur="3s" repeatCount="indefinite" />}
+                  <foreignObject x="30" y="38" width="36" height="36">
+                    <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+                      <div style={isRunning ? { animation: "spinPlateReverse 3s linear infinite" } : {}}>{firstIcon}</div>
+                    </div>
+                  </foreignObject>
+                </g>
+                {/* Steam wisps when running */}
+                {isRunning && (
+                  <>
+                    <path d="M34 36 C34 32 36 28 38 32" stroke="var(--accent)" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.4">
+                      <animate attributeName="opacity" values="0.1;0.5;0.1" dur="2s" repeatCount="indefinite" />
+                      <animateTransform attributeName="transform" type="translate" values="0,0;-1,-4;0,0" dur="2s" repeatCount="indefinite" />
+                    </path>
+                    <path d="M48 34 C48 30 50 26 52 30" stroke="var(--accent)" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.3">
+                      <animate attributeName="opacity" values="0.1;0.4;0.1" dur="2.5s" repeatCount="indefinite" />
+                      <animateTransform attributeName="transform" type="translate" values="0,0;1,-5;0,0" dur="2.5s" repeatCount="indefinite" />
+                    </path>
+                    <path d="M60 36 C60 32 62 28 64 32" stroke="var(--accent)" strokeWidth="1.2" fill="none" strokeLinecap="round" opacity="0.4">
+                      <animate attributeName="opacity" values="0.2;0.5;0.2" dur="1.8s" repeatCount="indefinite" />
+                      <animateTransform attributeName="transform" type="translate" values="0,0;-1,-4;0,0" dur="1.8s" repeatCount="indefinite" />
+                    </path>
+                  </>
+                )}
+                {/* Control panel */}
+                <rect x="92" y="20" width="18" height="52" rx="3" fill="var(--surface)" stroke="var(--border)" strokeWidth="0.8" />
+                {/* Timer display on microwave */}
+                <rect x="94" y="24" width="14" height="10" rx="2" fill="var(--bg)" />
+                <text x="101" y="32" textAnchor="middle" fill="var(--accent)" fontSize="7" fontFamily="'Fredoka', sans-serif" fontWeight="700">{formatTime(timeLeft)}</text>
+                {/* Buttons */}
+                <circle cx="101" cy="42" r="3.5" fill={isRunning ? "var(--accent)" : "var(--border)"} opacity={isRunning ? 1 : 0.5}>
+                  {isRunning && <animate attributeName="opacity" values="0.6;1;0.6" dur="1s" repeatCount="indefinite" />}
+                </circle>
+                <circle cx="101" cy="52" r="3" fill="var(--border)" opacity="0.4" />
+                <circle cx="101" cy="60" r="3" fill="var(--border)" opacity="0.25" />
+                {/* Handle */}
+                <line x1="86" y1="30" x2="86" y2="58" stroke="var(--border)" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            </div>
+            {/* Time display */}
+            <span style={{ fontSize: 40, fontWeight: 800, fontFamily: "'Fredoka', sans-serif", color: "var(--text)", fontVariantNumeric: "tabular-nums" }}>{formatTime(timeLeft)}</span>
+            <span style={{ fontSize: 12, color: "var(--muted)", marginTop: 2, letterSpacing: 1 }}>{isPreview ? "RECOMMENDED" : isRunning ? "HEATING..." : "PAUSED"}</span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const Icon = ({ icon, size = 32 }) => {
+  const icons = Array.isArray(icon) ? icon : [icon];
+  if (icons.length === 1) return <span style={{ fontSize: size, display: "inline-block", width: size * 1.2, textAlign: "center" }}>{icons[0]}</span>;
+  return <span style={{ fontSize: size * 0.75, display: "inline-flex", gap: 2 }}>{icons.map((e, i) => <span key={i}>{e}</span>)}</span>;
+};
+
+const Logo = ({ size = 28 }) => (
+  <svg viewBox="0 0 120 120" width={size} height={size} xmlns="http://www.w3.org/2000/svg">
+    <circle cx="60" cy="60" r="56" fill="#FF6B00" />
+    <circle cx="60" cy="60" r="46" fill="#FFF8EE" />
+    <circle cx="60" cy="60" r="42" fill="none" stroke="#FFE0B2" strokeWidth="1" />
+    <path d="M60 22 L60 30" stroke="#FF6B00" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M60 90 L60 98" stroke="#FF6B00" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M22 60 L30 60" stroke="#FF6B00" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M90 60 L98 60" stroke="#FF6B00" strokeWidth="2.5" strokeLinecap="round" />
+    <path d="M31.7 31.7 L37.4 37.4" stroke="#FFB800" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M82.6 82.6 L88.3 88.3" stroke="#FFB800" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M88.3 31.7 L82.6 37.4" stroke="#FFB800" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M31.7 88.3 L37.4 82.6" stroke="#FFB800" strokeWidth="1.8" strokeLinecap="round" />
+    <line x1="60" y1="60" x2="60" y2="34" stroke="#2D1B06" strokeWidth="3.5" strokeLinecap="round" />
+    <line x1="60" y1="60" x2="79" y2="50" stroke="#FF6B00" strokeWidth="2.5" strokeLinecap="round" />
+    <circle cx="60" cy="60" r="4" fill="#FF6B00" />
+    <circle cx="60" cy="60" r="2" fill="#FFF8EE" />
+    <path d="M42 80 C42 72 48 72 48 64" stroke="#FF6B00" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.8" />
+    <path d="M55 82 C55 74 61 74 61 66" stroke="#FFB800" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.7" />
+    <path d="M68 80 C68 72 74 72 74 64" stroke="#FF6B00" strokeWidth="2.2" fill="none" strokeLinecap="round" opacity="0.8" />
+  </svg>
+);
+
+function App() {
+  const [screen, setScreen] = useState("home");
+  const [wattage, setWattage] = useState(1000);
+  const [showWattageModal, setShowWattageModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFood, setSelectedFood] = useState(null);
+  const [fromFrozen, setFromFrozen] = useState(false);
+  const [portionMultiplier, setPortionMultiplier] = useState(1);
+  const [calcedTime, setCalcedTime] = useState(0);
+  const [timerLeft, setTimerLeft] = useState(0);
+  const [timerRunning, setTimerRunning] = useState(false);
+  const [timerTotal, setTimerTotal] = useState(0);
+  const [favorites, setFavorites] = useState([]);
+  const [history, setHistory] = useState([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [activeCategory, setActiveCategory] = useState(null);
+  const [smartResult, setSmartResult] = useState(null);
+  const [darkMode, setDarkMode] = useState(false);
+  const timerRef = useRef(null);
+
+  useEffect(() => {
+    if (timerRunning && timerLeft > 0) {
+      timerRef.current = setInterval(() => {
+        setTimerLeft(prev => {
+          if (prev <= 1) { clearInterval(timerRef.current); setTimerRunning(false); if ("Notification" in window && Notification.permission === "granted") new Notification("When's it ready?", { body: `Your ${selectedFood?.name || "food"} is done! 🎉` }); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timerRef.current);
+  }, [timerRunning, timerLeft, selectedFood]);
+
+  const selectFood = useCallback((food, source = "browse") => {
+    setSelectedFood(food);
+    const sr = source === "smart" ? getSmartSuggestion(searchQuery) : null;
+    const frozen = sr?.isFrozen || food.category === "Frozen";
+    setFromFrozen(frozen);
+    setPortionMultiplier(1);
+    setCalcedTime(calcTime(food.baseTime, wattage, 1, frozen));
+    setSmartResult(sr);
+    setScreen("result");
+  }, [wattage, searchQuery]);
+
+  const recalcTime = useCallback(() => {
+    if (selectedFood) setCalcedTime(calcTime(selectedFood.baseTime, wattage, portionMultiplier, fromFrozen));
+  }, [selectedFood, wattage, portionMultiplier, fromFrozen]);
+
+  useEffect(() => { recalcTime(); }, [recalcTime]);
+
+  const startTimer = () => {
+    if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
+    setTimerTotal(calcedTime); setTimerLeft(calcedTime); setTimerRunning(true); setScreen("timer");
+    if (selectedFood) setHistory(prev => [{ food: selectedFood, time: calcedTime, wattage, date: new Date().toLocaleString() }, ...prev.slice(0, 19)]);
+  };
+
+  const toggleFav = (food) => setFavorites(prev => prev.find(f => f.id === food.id) ? prev.filter(f => f.id !== food.id) : [...prev, food]);
+  const isFav = (food) => favorites.some(f => f.id === food.id);
+
+  const handleSearch = () => {
+    if (!searchQuery.trim()) return;
+    const result = getSmartSuggestion(searchQuery);
+    if (result) selectFood(result.food, "smart");
+  };
+
+  const filteredFoods = activeCategory ? FOOD_DATABASE.filter(f => f.category === activeCategory) : FOOD_DATABASE;
+  const timerProgress = timerTotal > 0 ? 1 - timerLeft / timerTotal : 0;
+
+  return (
+    <div data-theme={darkMode ? "dark" : "light"} style={{ minHeight: "100vh", background: "var(--bg)", fontFamily: "'Nunito', sans-serif", maxWidth: 480, margin: "0 auto", position: "relative", overflow: "hidden", transition: "background 0.4s, color 0.3s" }}>
+      {/* Ambient background */}
+      <div style={{ position: "fixed", top: 0, left: "50%", transform: "translateX(-50%)", width: 480, height: "100vh", pointerEvents: "none", zIndex: 0, overflow: "hidden" }}>
+        <div style={{
+          position: "absolute", top: -80, right: -60, width: 300, height: 300, borderRadius: "50%",
+          background: darkMode ? "radial-gradient(circle, rgba(255,184,0,0.08) 0%, transparent 70%)" : "radial-gradient(circle, rgba(255,165,0,0.12) 0%, transparent 70%)",
+          animation: "float1 8s ease-in-out infinite", transition: "background 0.5s",
+        }} />
+        <div style={{
+          position: "absolute", top: "30%", left: -80, width: 250, height: 250, borderRadius: "50%",
+          background: darkMode ? "radial-gradient(circle, rgba(165,214,74,0.06) 0%, transparent 70%)" : "radial-gradient(circle, rgba(139,195,74,0.1) 0%, transparent 70%)",
+          animation: "float2 10s ease-in-out infinite", transition: "background 0.5s",
+        }} />
+        <div style={{
+          position: "absolute", bottom: "10%", right: -40, width: 220, height: 220, borderRadius: "50%",
+          background: darkMode ? "radial-gradient(circle, rgba(255,140,0,0.06) 0%, transparent 70%)" : "radial-gradient(circle, rgba(255,200,0,0.1) 0%, transparent 70%)",
+          animation: "float3 12s ease-in-out infinite", transition: "background 0.5s",
+        }} />
+        <div style={{
+          position: "absolute", top: "60%", left: "20%", width: 180, height: 180, borderRadius: "50%",
+          background: darkMode ? "radial-gradient(circle, rgba(255,184,0,0.04) 0%, transparent 70%)" : "radial-gradient(circle, rgba(255,107,0,0.06) 0%, transparent 70%)",
+          animation: "float1 14s ease-in-out infinite reverse", transition: "background 0.5s",
+        }} />
+        {/* Subtle dot pattern overlay */}
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: darkMode
+            ? "radial-gradient(circle, rgba(255,184,0,0.03) 1px, transparent 1px)"
+            : "radial-gradient(circle, rgba(255,165,0,0.04) 1px, transparent 1px)",
+          backgroundSize: "24px 24px",
+          transition: "background-image 0.5s",
+        }} />
+      </div>
+      <div style={{ position: "relative", zIndex: 1 }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=Fredoka:wght@400;500;600;700&display=swap');
+        [data-theme="light"] { --bg:#FFFDF7;--surface:rgba(255,248,238,0.85);--surface2:rgba(255,242,224,0.9);--border:#FFE0B2;--text:#2D1B06;--muted:#A07848;--accent:#FF6B00;--accent2:#8BC34A;--accent-glow:rgba(255,107,0,0.1);--green:#4CAF50;--timer-ring:rgba(255,107,0,0.12);--timer-active:#FF6B00;--timer-done:#4CAF50;--modal-bg:rgba(255,253,247,0.95);--card-hover-shadow:rgba(255,165,0,0.15);--chip-active-text:#fff;--toggle-bg:#E8D8C4; }
+        [data-theme="dark"] { --bg:#1A1408;--surface:rgba(42,32,16,0.85);--surface2:rgba(52,42,24,0.9);--border:#4A3C28;--text:#FFF5E6;--muted:#B8A080;--accent:#FFB800;--accent2:#A5D64A;--accent-glow:rgba(255,184,0,0.12);--green:#66BB6A;--timer-ring:rgba(255,184,0,0.12);--timer-active:#FFB800;--timer-done:#66BB6A;--modal-bg:rgba(26,20,8,0.95);--card-hover-shadow:rgba(255,184,0,0.1);--chip-active-text:#1A1408;--toggle-bg:#4A3C28; }
+        * { box-sizing:border-box;margin:0;padding:0; }
+        ::selection { background:var(--accent);color:white; }
+        input::placeholder { color:var(--muted); }
+        ::-webkit-scrollbar { width:4px; } ::-webkit-scrollbar-track { background:transparent; } ::-webkit-scrollbar-thumb { background:var(--border);border-radius:4px; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes glow { 0%,100%{box-shadow:0 0 20px var(--accent-glow)} 50%{box-shadow:0 0 40px var(--accent-glow)} }
+        @keyframes shake { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-8deg)} 75%{transform:rotate(8deg)} }
+        @keyframes slideIn { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes bounceIn { 0%{opacity:0;transform:scale(0.8)} 50%{transform:scale(1.05)} 100%{opacity:1;transform:scale(1)} }
+        @keyframes spinPlate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes spinPlateReverse { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
+        @keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,30px)} }
+        @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-15px,25px)} }
+        @keyframes float3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(25px,-20px)} }
+        .food-card { background:var(--surface);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:18px;padding:16px;cursor:pointer;transition:all 0.2s ease;display:flex;align-items:center;gap:14px;animation:fadeUp 0.4s ease both; }
+        .food-card:hover { border-color:var(--accent);background:var(--surface2);transform:translateY(-2px);box-shadow:0 8px 24px var(--card-hover-shadow); }
+        .btn-primary { background:var(--accent);color:white;border:none;border-radius:14px;padding:16px 32px;font-size:16px;font-weight:700;cursor:pointer;transition:all 0.2s;font-family:inherit;letter-spacing:0.5px; }
+        .btn-primary:hover { filter:brightness(1.1);transform:translateY(-1px); }
+        .btn-primary:active { transform:translateY(0); }
+        .btn-secondary { background:var(--surface2);backdrop-filter:blur(12px);color:var(--text);border:1px solid var(--border);border-radius:14px;padding:14px 24px;font-size:15px;font-weight:600;cursor:pointer;transition:all 0.2s;font-family:inherit; }
+        .btn-secondary:hover { border-color:var(--accent);background:var(--surface); }
+        .chip { padding:8px 16px;border-radius:100px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.2s;border:1px solid var(--border);background:var(--surface);backdrop-filter:blur(8px);color:var(--muted);white-space:nowrap;font-family:inherit; }
+        .chip.active { background:var(--accent);color:var(--chip-active-text);border-color:var(--accent); }
+        .chip:hover { border-color:var(--accent); }
+        .modal-overlay { position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:flex-end;justify-content:center;z-index:100;backdrop-filter:blur(8px); }
+        .modal-content { background:var(--modal-bg);backdrop-filter:blur(20px);border-radius:24px 24px 0 0;padding:32px 24px;width:100%;max-width:480px;animation:fadeUp 0.3s ease;border-top:3px solid var(--accent); }
+        .theme-toggle { width:44px;height:26px;border-radius:13px;border:none;cursor:pointer;position:relative;transition:background 0.3s;padding:0; }
+        .theme-toggle .thumb { width:20px;height:20px;border-radius:10px;background:white;position:absolute;top:3px;transition:left 0.3s;box-shadow:0 1px 3px rgba(0,0,0,0.2); }
+      `}</style>
+
+      {/* HOME */}
+      {screen === "home" && (
+        <div style={{ padding: "24px 20px", animation: "fadeUp 0.4s ease" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 28 }}>
+            <div>
+              <h1 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 28, fontWeight: 700, color: "var(--text)", lineHeight: 1.1, marginBottom: 6 }}>
+                When's it<br/>ready? <span style={{ display: "inline-block", verticalAlign: "middle", marginLeft: 4 }}><Logo size={32} /></span>
+              </h1>
+              <p style={{ color: "var(--muted)", fontSize: 14, fontWeight: 500 }}>113 foods · Perfect times · Zero guesswork</p>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button className="theme-toggle" onClick={() => setDarkMode(!darkMode)} style={{ background: darkMode ? "var(--accent)" : "var(--toggle-bg)" }} aria-label="Toggle dark mode">
+                <div className="thumb" style={{ left: darkMode ? 21 : 3 }} />
+                <span style={{ position: "absolute", top: 4, left: darkMode ? 5 : "auto", right: darkMode ? "auto" : 5, fontSize: 13, lineHeight: "18px" }}>{darkMode ? "🌙" : "☀️"}</span>
+              </button>
+              <button onClick={() => setShowHistory(true)} style={{ width: 42, height: 42, borderRadius: 12, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>📋</button>
+              <button onClick={() => setShowWattageModal(true)} style={{ height: 42, borderRadius: 12, background: "var(--surface)", border: "1px solid var(--border)", color: "var(--text)", cursor: "pointer", padding: "0 14px", fontSize: 13, fontWeight: 700, fontFamily: "inherit", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: "var(--accent)" }}>⚡</span> {wattage}W
+              </button>
+            </div>
+          </div>
+
+          <div style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 16, padding: 4, marginBottom: 24, display: "flex", gap: 4 }}>
+            <input value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === "Enter" && handleSearch()} placeholder='Try "leftover chicken with rice"' style={{ flex: 1, background: "transparent", border: "none", outline: "none", color: "var(--text)", fontSize: 15, padding: "14px 16px", fontFamily: "inherit" }} />
+            <button onClick={handleSearch} style={{ background: "var(--accent)", border: "none", borderRadius: 12, padding: "12px 18px", color: "white", cursor: "pointer", fontSize: 14, fontWeight: 700, fontFamily: "inherit", whiteSpace: "nowrap" }}>🔍 Find</button>
+          </div>
+
+          {favorites.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h3 style={{ fontSize: 13, fontWeight: 600, color: "var(--muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>★ Favorites</h3>
+              <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 8 }}>
+                {favorites.map(food => (
+                  <button key={food.id} onClick={() => selectFood(food)} style={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 14, padding: "12px 16px", cursor: "pointer", display: "flex", alignItems: "center", gap: 8, whiteSpace: "nowrap", transition: "all 0.2s", minWidth: "fit-content" }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = "var(--accent)"} onMouseLeave={e => e.currentTarget.style.borderColor = "var(--border)"}>
+                    <Icon icon={food.icon} size={20} />
+                    <span style={{ color: "var(--text)", fontSize: 14, fontWeight: 500 }}>{food.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ display: "flex", gap: 6, overflowX: "auto", marginBottom: 20, paddingBottom: 4 }}>
+            <button className={`chip ${activeCategory === null ? "active" : ""}`} onClick={() => setActiveCategory(null)}>All</button>
+            {CATEGORIES.map(cat => <button key={cat} className={`chip ${activeCategory === cat ? "active" : ""}`} onClick={() => setActiveCategory(cat)}>{cat}</button>)}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {filteredFoods.map((food, i) => (
+              <div key={food.id} className="food-card" style={{ animationDelay: `${Math.min(i * 0.02, 0.5)}s` }} onClick={() => selectFood(food)}>
+                <Icon icon={food.icon} size={32} />
+                <div style={{ flex: 1 }}>
+                  <div style={{ color: "var(--text)", fontWeight: 600, fontSize: 15, marginBottom: 2 }}>{food.name}</div>
+                  <div style={{ color: "var(--muted)", fontSize: 13 }}>~{formatTimeWords(calcTime(food.baseTime, wattage))} at {wattage}W</div>
+                </div>
+                <button onClick={e => { e.stopPropagation(); toggleFav(food); }} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: isFav(food) ? "var(--accent)" : "var(--border)", transition: "all 0.2s", padding: 4 }}>
+                  {isFav(food) ? "★" : "☆"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* RESULT */}
+      {screen === "result" && selectedFood && (
+        <div style={{ padding: "24px 20px", animation: "fadeUp 0.3s ease" }}>
+          <button onClick={() => { setScreen("home"); setSearchQuery(""); setSmartResult(null); }} style={{ background: "none", border: "none", color: "var(--muted)", cursor: "pointer", fontSize: 14, fontFamily: "inherit", marginBottom: 20, display: "flex", alignItems: "center", gap: 6 }}>← Back</button>
+
+          <div style={{ textAlign: "center", marginBottom: 32 }}>
+            <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 12 }}>
+              {(Array.isArray(selectedFood.icon) ? selectedFood.icon : [selectedFood.icon]).map((emoji, i) => (
+                <span key={i} style={{ fontSize: 48 }}>{emoji}</span>
+              ))}
+            </div>
+            <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 26, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>{selectedFood.name}</h2>
+            {smartResult && (
+              <div style={{ marginBottom: 8 }}>
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 6, background: "var(--accent-glow)", border: "1px solid var(--accent)", borderRadius: 100, padding: "6px 14px", fontSize: 12, color: "var(--accent)", fontWeight: 500 }}>
+                  🔍 Smart Match · {Math.round(smartResult.confidence * 100)}% confidence
+                </div>
+                {smartResult.matchedFoods && smartResult.matchedFoods.length > 1 && (
+                  <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12, flexWrap: "wrap" }}>
+                    {smartResult.matchedFoods.map((mf, i) => (
+                      <div key={mf.id} style={{ background: "var(--surface2)", border: "1px solid var(--border)", borderRadius: 10, padding: "6px 12px", fontSize: 12, color: "var(--text)", display: "flex", alignItems: "center", gap: 5, fontWeight: 500, animation: `slideIn 0.3s ease ${i * 0.1}s both` }}>
+                        <span>{mf.icon}</span> {mf.name}
+                        <span style={{ color: "var(--muted)", fontSize: 11 }}>~{formatTimeWords(mf.baseTime)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            <p style={{ color: "var(--muted)", fontSize: 14, maxWidth: 280, margin: "8px auto 0" }}>{selectedFood.tip}</p>
+          </div>
+
+          <div style={{ background: "var(--surface)", borderRadius: 24, padding: 32, textAlign: "center", marginBottom: 24, border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 13, color: "var(--muted)", letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 12 }}>Microwave for</div>
+            <div style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 56, fontWeight: 800, color: "var(--accent)", lineHeight: 1, marginBottom: 8, fontVariantNumeric: "tabular-nums" }}>{formatTime(calcedTime)}</div>
+            <div style={{ color: "var(--muted)", fontSize: 14 }}>{formatTimeWords(calcedTime)} at {wattage}W</div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 24 }}>
+            <div style={{ background: "var(--surface)", borderRadius: 16, padding: "16px 20px", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div><div style={{ color: "var(--text)", fontSize: 14, fontWeight: 600 }}>Portion size</div><div style={{ color: "var(--muted)", fontSize: 12 }}>Adjust for more or less food</div></div>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <button onClick={() => setPortionMultiplier(p => Math.max(0.5, p - 0.25))} style={{ width: 36, height: 36, borderRadius: 10, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>−</button>
+                <span style={{ color: "var(--accent)", fontWeight: 700, fontSize: 16, minWidth: 40, textAlign: "center" }}>{portionMultiplier}×</span>
+                <button onClick={() => setPortionMultiplier(p => Math.min(3, p + 0.25))} style={{ width: 36, height: 36, borderRadius: 10, background: "var(--surface2)", border: "1px solid var(--border)", color: "var(--text)", cursor: "pointer", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center" }}>+</button>
+              </div>
+            </div>
+            <div style={{ background: "var(--surface)", borderRadius: 16, padding: "16px 20px", border: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div><div style={{ color: "var(--text)", fontSize: 14, fontWeight: 600 }}>Starting frozen?</div><div style={{ color: "var(--muted)", fontSize: 12 }}>Adds extra time for defrosting</div></div>
+              <button onClick={() => setFromFrozen(!fromFrozen)} style={{ width: 52, height: 30, borderRadius: 15, border: "none", cursor: "pointer", background: fromFrozen ? "var(--accent)" : "var(--surface2)", position: "relative", transition: "background 0.2s" }}>
+                <div style={{ width: 24, height: 24, borderRadius: 12, background: "white", position: "absolute", top: 3, left: fromFrozen ? 25 : 3, transition: "left 0.2s" }} />
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <button onClick={() => toggleFav(selectedFood)} className="btn-secondary" style={{ flex: "0 0 auto" }}>{isFav(selectedFood) ? "★" : "☆"}</button>
+            <button onClick={startTimer} className="btn-primary" style={{ flex: 1 }}>Start Timer →</button>
+          </div>
+        </div>
+      )}
+
+      {/* TIMER */}
+      {screen === "timer" && (
+        <div style={{ padding: "24px 20px", animation: "fadeUp 0.3s ease", textAlign: "center", minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <div style={{ marginBottom: 8 }}>
+            <div style={{ display: "flex", gap: 6, justifyContent: "center" }}>
+              {(Array.isArray(selectedFood?.icon) ? selectedFood.icon : [selectedFood?.icon]).map((emoji, i) => <span key={i} style={{ fontSize: 36 }}>{emoji}</span>)}
+            </div>
+          </div>
+          <h2 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 22, fontWeight: 700, color: "var(--text)", marginBottom: 32 }}>{selectedFood?.name}</h2>
+          <div style={{ animation: timerRunning ? "glow 2s ease infinite" : "none", borderRadius: "50%", display: "inline-block", margin: "0 auto 36px" }}>
+            <CircularTimer progress={timerProgress} timeLeft={timerLeft} isRunning={timerRunning} total={timerTotal} foodIcon={selectedFood?.icon} />
+          </div>
+          {selectedFood?.tip && (
+            <div style={{ background: "var(--accent-glow)", borderRadius: 14, padding: "14px 20px", fontSize: 14, color: "var(--accent)", fontWeight: 500, border: "1px solid var(--accent)", maxWidth: 320, margin: "0 auto 32px" }}>💡 {selectedFood.tip}</div>
+          )}
+          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+            {timerLeft === 0 && timerProgress > 0 ? (
+              <button onClick={() => { setScreen("home"); setSearchQuery(""); }} className="btn-primary" style={{ minWidth: 200 }}>Done! 🎉</button>
+            ) : (
+              <>
+                <button onClick={() => { setTimerRunning(false); clearInterval(timerRef.current); setScreen("result"); }} className="btn-secondary">Cancel</button>
+                <button onClick={() => setTimerRunning(!timerRunning)} className="btn-primary" style={{ minWidth: 140 }}>{timerRunning ? "Pause" : "Resume"}</button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* WATTAGE MODAL */}
+      {showWattageModal && (
+        <div className="modal-overlay" onClick={() => setShowWattageModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 22, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>⚡ Microwave Wattage</h3>
+            <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 24 }}>Check the label inside your microwave door.</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {WATTAGES.map(w => (
+                <button key={w} onClick={() => { setWattage(w); setShowWattageModal(false); }} style={{ padding: 16, borderRadius: 14, cursor: "pointer", fontFamily: "inherit", fontSize: 16, fontWeight: 600, transition: "all 0.2s", background: w === wattage ? "var(--accent)" : "var(--surface2)", color: w === wattage ? "white" : "var(--text)", border: `1px solid ${w === wattage ? "var(--accent)" : "var(--border)"}` }}>{w}W</button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HISTORY MODAL */}
+      {showHistory && (
+        <div className="modal-overlay" onClick={() => setShowHistory(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxHeight: "70vh", overflowY: "auto" }}>
+            <h3 style={{ fontFamily: "'Fredoka', sans-serif", fontSize: 22, fontWeight: 700, color: "var(--text)", marginBottom: 6 }}>📋 History</h3>
+            <p style={{ color: "var(--muted)", fontSize: 14, marginBottom: 20 }}>Your recent microwave sessions.</p>
+            {history.length === 0 ? (
+              <div style={{ textAlign: "center", padding: 32, color: "var(--muted)" }}><span style={{ fontSize: 36, display: "block", marginBottom: 12 }}>😶</span>No history yet. Start heating!</div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {history.map((entry, i) => (
+                  <div key={i} style={{ background: "var(--surface2)", borderRadius: 14, padding: "14px 16px", display: "flex", alignItems: "center", gap: 12, animation: `slideIn 0.3s ease ${i * 0.05}s both`, cursor: "pointer" }} onClick={() => { selectFood(entry.food); setShowHistory(false); }}>
+                    <Icon icon={entry.food.icon} size={28} />
+                    <div style={{ flex: 1 }}><div style={{ color: "var(--text)", fontWeight: 600, fontSize: 14 }}>{entry.food.name}</div><div style={{ color: "var(--muted)", fontSize: 12 }}>{formatTimeWords(entry.time)} · {entry.wattage}W</div></div>
+                    <div style={{ color: "var(--muted)", fontSize: 11 }}>{entry.date}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setShowHistory(false)} className="btn-secondary" style={{ width: "100%", marginTop: 16 }}>Close</button>
+          </div>
+        </div>
+      )}
+      </div>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(React.createElement(App));
+</script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
