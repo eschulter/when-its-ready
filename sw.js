@@ -1,4 +1,4 @@
-const CACHE_NAME = 'whens-it-ready-v2';
+const CACHE_NAME = 'whens-it-ready-v3';
 const ASSETS = [
   './',
   './index.html',

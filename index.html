@@ -420,19 +420,16 @@ function CircularTimer({ progress, timeLeft, isRunning, total, foodIcon }) {
                     <animate attributeName="opacity" values="0.03;0.08;0.03" dur="1.5s" repeatCount="indefinite" />
                   </rect>
                 )}
-                {/* Turntable line */}
+                {/* Turntable - animated as horizontal spin */}
                 <ellipse cx="48" cy="64" rx="22" ry="3" fill="none" stroke="var(--border)" strokeWidth="0.8" strokeDasharray="2 2">
-                  {isRunning && <animateTransform attributeName="transform" type="rotate" from="0 48 64" to="360 48 64" dur="3s" repeatCount="indefinite" />}
+                  {isRunning && <animate attributeName="rx" values="22;8;22;8;22" dur="3s" repeatCount="indefinite" />}
                 </ellipse>
-                {/* Food on plate */}
-                <g>
-                  {isRunning && <animateTransform attributeName="transform" type="rotate" from="0 48 56" to="360 48 56" dur="3s" repeatCount="indefinite" />}
-                  <foreignObject x="30" y="38" width="36" height="36">
-                    <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
-                      <div style={isRunning ? { animation: "spinPlateReverse 3s linear infinite" } : {}}>{firstIcon}</div>
-                    </div>
-                  </foreignObject>
-                </g>
+                {/* Food on plate - oscillates horizontally */}
+                <foreignObject x="30" y="38" width="36" height="36">
+                  <div xmlns="http://www.w3.org/1999/xhtml" style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22 }}>
+                    <div style={isRunning ? { animation: "plateHSpin 3s linear infinite", transformStyle: "preserve-3d" } : {}}>{firstIcon}</div>
+                  </div>
+                </foreignObject>
                 {/* Steam wisps when running */}
                 {isRunning && (
                   <>
@@ -619,8 +616,7 @@ function App() {
         @keyframes shake { 0%,100%{transform:rotate(0)} 25%{transform:rotate(-8deg)} 75%{transform:rotate(8deg)} }
         @keyframes slideIn { from{opacity:0;transform:translateX(-12px)} to{opacity:1;transform:translateX(0)} }
         @keyframes bounceIn { 0%{opacity:0;transform:scale(0.8)} 50%{transform:scale(1.05)} 100%{opacity:1;transform:scale(1)} }
-        @keyframes spinPlate { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-        @keyframes spinPlateReverse { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} }
+        @keyframes plateHSpin { 0%{transform:perspective(100px) rotateY(0deg)} 100%{transform:perspective(100px) rotateY(360deg)} }
         @keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,30px)} }
         @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-15px,25px)} }
         @keyframes float3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(25px,-20px)} }
